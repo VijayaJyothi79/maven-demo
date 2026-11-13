@@ -2,29 +2,42 @@ pipeline {
     agent any
 
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
-        stage('Maven Build') {
+        stage('Build with Maven') {
             steps {
                 sh 'mvn clean package'
             }
         }
 
-        stage('Docker Build') {
+        stage('Build Docker Image') {
             steps {
-                sh 'docker build -t maven-demo:latest .'
+                sh 'docker build -t webdemo:${BUILD_NUMBER} .'
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy Container') {
             steps {
-                sh 'docker rm -f maven-demo || true'
-                sh 'docker run --name maven-demo maven-demo:latest'
+                sh '''
+                    docker rm -f webdemo || true
+                    docker run -d --name webdemo -p 8082:8080 webdemo:${BUILD_NUMBER}
+                '''
             }
+        }
+    }
+
+    post {
+        success {
+            echo 'Build and deployment completed successfully.'
+        }
+
+        failure {
+            echo 'Pipeline failed. Check the stage console output.'
         }
     }
 }
